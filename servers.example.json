@@ -1,0 +1,8 @@
+{
+  "prefix": "myapp_",
+  "servers": [
+    { "name": "service-a", "port": 8080 },
+    { "name": "service-b", "port": 8090 },
+    { "name": "service-c", "port": 8083 }
+  ]
+}
