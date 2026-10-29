@@ -61,6 +61,22 @@ function useInterval(callback, delayMs) {
   }, [delayMs]);
 }
 
+// 터미널 크기가 바뀌면 리렌더해서 보드 폭·높이가 따라 바뀌게 한다(없으면 다음 10초 폴링 때까지 옛 크기로 남는다).
+function useTerminalSize() {
+  const read = () => ({ columns: process.stdout.columns || 0, rows: process.stdout.rows || 24 });
+  const [size, setSize] = useState(read);
+  useEffect(() => {
+    function handleResize() {
+      setSize(read());
+    }
+    process.stdout.on('resize', handleResize);
+    return () => {
+      process.stdout.off('resize', handleResize);
+    };
+  }, []);
+  return size;
+}
+
 function portCell(row) {
   if (row.Location === '중지됨') {
     return { text: '-', color: STATUS_COLORS.stopped };
@@ -102,6 +118,7 @@ function Board() {
   const [rowsByProject, setRowsByProject] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [lastError, setLastError] = useState(null);
+  const { columns: terminalColumns, rows: terminalRows } = useTerminalSize();
 
   async function poll() {
     try {
@@ -165,14 +182,12 @@ function Board() {
   // 순간 테두리가 틀어졌다가 갱신 성공 후 문구가 짧아지면서 저절로 풀림). 그래서 터미널 칸
   // 수를 넘지 않도록 최종 폭을 한 번 더 clamp한다.
   const rawBoardWidth = contentWidth + 2 /* paddingX 양쪽 */ + 2 /* borderStyle 양쪽 */;
-  const terminalColumns = process.stdout.columns || rawBoardWidth;
-  const boardWidth = Math.max(4, Math.min(rawBoardWidth, terminalColumns));
+  const boardWidth = Math.max(4, Math.min(rawBoardWidth, terminalColumns || rawBoardWidth));
 
   // claude-agents-board와 같은 패턴: 내용이 짧아도 처음부터 터미널 높이만큼 테두리를 늘려 두고
   // (좌우 테두리가 패널 바닥까지 이어진다), 범례는 justifyContent: space-between으로 "위 블록"과
   // 양 끝에 고정해서 내용 길이와 무관하게 항상 하단 테두리 바로 위 줄에 오게 한다(남는 자리는
   // 둘 사이의 빈 칸으로 몰린다).
-  const terminalRows = process.stdout.rows || 24;
 
   return h(
     Box,
